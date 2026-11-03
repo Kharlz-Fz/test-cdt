@@ -1,0 +1,111 @@
+name: Taiga Sync
+on:
+  issues:
+    types: [opened, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+# Eventos del mismo issue se serializan (evita crear duplicados cuando un issue
+# se abre con labels). Cada comentario tiene su propio grupo para que nunca se cancele.
+concurrency:
+  group: taiga-sync-${{ github.event.issue.number }}-${{ github.event_name == 'issue_comment' && github.event.comment.id || 'issue' }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync Items
+    runs-on: ubuntu-latest
+    # issue_comment también se dispara en PRs; solo sincronizamos issues
+    if: ${{ !github.event.issue.pull_request }}
+    env:
+      TAIGA_HOST: ${{ secrets.TAIGA_HOST || 'https://api.taiga.io' }}
+      TAIGA_USERNAME: ${{ secrets.TAIGA_USERNAME }}
+      TAIGA_PASSWORD: ${{ secrets.TAIGA_PASSWORD }}
+      TAIGA_PROJECT_SLUG: ${{ secrets.TAIGA_PROJECT_SLUG || vars.TAIGA_PROJECT_SLUG }}
+    steps:
+      - name: Sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for v in TAIGA_USERNAME TAIGA_PASSWORD TAIGA_PROJECT_SLUG; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Falta configurar $v (Settings > Secrets and variables > Actions)"
+              exit 1
+            fi
+          done
+
+          API="${TAIGA_HOST%/}/api/v1"
+          EVENT="$GITHUB_EVENT_PATH"
+
+          # Datos del evento leídos con jq (nunca interpolados en el script)
+          NUMBER=$(jq -r '.issue.number' "$EVENT")
+          TITLE=$(jq -r '.issue.title' "$EVENT")
+          URL=$(jq -r '.issue.html_url' "$EVENT")
+          AUTHOR=$(jq -r '.issue.user.login' "$EVENT")
+          REF_TAG="github-${NUMBER}"
+          # Tags = labels actuales del issue (en minúsculas, Taiga normaliza) + tag de referencia
+          TAGS=$(jq -c --arg ref "$REF_TAG" '[.issue.labels[].name | ascii_downcase] + [$ref] | unique' "$EVENT")
+
+          api() { # api METHOD PATH [JSON_BODY]
+            local method=$1 path=$2 body=${3:-}
+            local args=(-sS --fail-with-body -X "$method" "$API$path" -H "Content-Type: application/json")
+            [ -n "${TOKEN:-}" ] && args+=(-H "Authorization: Bearer $TOKEN")
+            [ -n "$body" ] && args+=(--data "$body")
+            curl "${args[@]}"
+          }
+
+          echo "Autenticando en $TAIGA_HOST..."
+          TOKEN=$(api POST /auth "$(jq -n --arg u "$TAIGA_USERNAME" --arg p "$TAIGA_PASSWORD" \
+            '{type:"normal", username:$u, password:$p}')" | jq -r '.auth_token')
+          echo "::add-mask::$TOKEN"
+
+          PROJECT_ID=$(api GET "/projects/by_slug?slug=${TAIGA_PROJECT_SLUG}" | jq -r '.id')
+          echo "Proyecto Taiga: $TAIGA_PROJECT_SLUG (id $PROJECT_ID)"
+
+          # Buscar el issue de Taiga vinculado (por el tag github-N)
+          TAIGA_ISSUE=$(api GET "/issues?project=${PROJECT_ID}&tags=${REF_TAG}" | jq -c --arg t "$REF_TAG" '
+            [ .[] | select(any(.tags[]?; (if type == "array" then .[0] else . end) == $t)) ] | first // empty')
+
+          if [ -z "$TAIGA_ISSUE" ]; then
+            echo "No existe en Taiga, creando issue para #$NUMBER..."
+            BODY=$(jq -r '.issue.body // ""' "$EVENT")
+            DESCRIPTION=$(printf '%s\n\n---\nSincronizado desde GitHub: %s (abierto por @%s)' "$BODY" "$URL" "$AUTHOR")
+            TAIGA_ISSUE=$(api POST /issues "$(jq -n \
+              --argjson project "$PROJECT_ID" \
+              --arg subject "[GH-#${NUMBER}] ${TITLE}" \
+              --arg description "$DESCRIPTION" \
+              --argjson tags "$TAGS" \
+              '{project:$project, subject:$subject, description:$description, tags:$tags}')")
+          else
+            # Sincronizar labels -> tags (solo si cambiaron)
+            CURRENT=$(jq -c '[.tags[]? | if type == "array" then .[0] else . end] | unique' <<<"$TAIGA_ISSUE")
+            if [ "$CURRENT" != "$TAGS" ]; then
+              echo "Actualizando tags: $CURRENT -> $TAGS"
+              TAIGA_ISSUE=$(api PATCH "/issues/$(jq -r .id <<<"$TAIGA_ISSUE")" "$(jq -n \
+                --argjson tags "$TAGS" --argjson version "$(jq .version <<<"$TAIGA_ISSUE")" \
+                '{tags:$tags, version:$version}')")
+            fi
+          fi
+
+          TAIGA_ID=$(jq -r .id <<<"$TAIGA_ISSUE")
+          TAIGA_REF=$(jq -r .ref <<<"$TAIGA_ISSUE")
+
+          # Reenviar comentarios
+          if [ "$GITHUB_EVENT_NAME" = "issue_comment" ]; then
+            C_AUTHOR=$(jq -r '.comment.user.login' "$EVENT")
+            C_URL=$(jq -r '.comment.html_url' "$EVENT")
+            C_BODY=$(jq -r '.comment.body' "$EVENT")
+            COMMENT=$(printf '**@%s** comentó en GitHub ([ver](%s)):\n\n%s' "$C_AUTHOR" "$C_URL" "$C_BODY")
+            echo "Agregando comentario de @$C_AUTHOR a Taiga #$TAIGA_REF..."
+            api PATCH "/issues/$TAIGA_ID" "$(jq -n \
+              --arg comment "$COMMENT" --argjson version "$(jq .version <<<"$TAIGA_ISSUE")" \
+              '{comment:$comment, version:$version}')" > /dev/null
+          fi
+
+          LINK="${TAIGA_HOST/api./}/project/${TAIGA_PROJECT_SLUG}/issue/${TAIGA_REF}"
+          echo "GitHub #$NUMBER <-> Taiga #$TAIGA_REF: $LINK"
+          echo "GitHub #$NUMBER ↔ Taiga [#$TAIGA_REF]($LINK)" >> "$GITHUB_STEP_SUMMARY"
