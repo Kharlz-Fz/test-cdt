@@ -8,8 +8,6 @@ on:
 permissions:
   contents: read
 
-# Eventos del mismo issue se serializan (evita crear duplicados cuando un issue
-# se abre con labels). Cada comentario tiene su propio grupo para que nunca se cancele.
 concurrency:
   group: taiga-sync-${{ github.event.issue.number }}-${{ github.event_name == 'issue_comment' && github.event.comment.id || 'issue' }}
   cancel-in-progress: false
