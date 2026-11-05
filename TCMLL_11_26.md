@@ -71,3 +71,11 @@
 | **CSM-01** | Creación masiva de subastas desde CSV | Funcional | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Subastas en línea” del panel de subastas.<br>3. Seleccionar la opción de “Programación masiva”.<br>4. Llenar el formulario junto con la carga del CSV siguiendo el formato solicitado y crear el lote de subastas. | Se crean los lotes de subastas correctamente en estado "Programada" con todas sus variables asociadas. |
 | **CSM-02** | Validación de traslape de fechas y vehículos ocupados | Regla de Negocio | Intentar crear mediante CSV una subasta con un vehículo que ya pertenece a otra subasta activa, subastas con vehículos similares y vehículos en estados no disponibles o de subastas ya finalizadas con ganador asignado. | El sistema detecta la colisión/conflicto de vehículo o fechas y rechaza la creación de ese lote específico con un mensaje explicativo. |
 | **CSM-03** | Carga masiva de subastas de Tipo "Conjunto" vs "Individual" | Funcional | Incluir en el CSV subastas de lotes y subastas individuales. | El sistema interpreta correctamente la relación entre subastas y vehículos según el archivo de carga. |
+
+---
+
+## 8. Inclusión de precios 0 en subastas de lotes
+
+| ID | Título del Caso | Tipo | Pasos | Resultado Esperado |
+|---|---|---|---|---|
+| **ZSL-01** | Creación de un lote con precio $0  | Regla de negocio | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Subastas por lotes” del panel de subastas.<br>3. Seleccionar la opción de “Crear Lote”.<br>4. Llenar el formulario con los datos y selección de vehículos disponibles, pero asignando valor de precio base igual a cero. | Se crean los lotes de vehículos con su respectivo valor base de $0.|
