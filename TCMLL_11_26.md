@@ -17,9 +17,9 @@
 
 | ID | Título del Caso | Tipo | Pasos | Resultado Esperado |
 |---|---|---|---|---|
-| **MAR-01** | Gestión de aprobación de modificaciones de remanentes | Funcional | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Carga Masiva de Remanentes” del panel de pagos.<br>3. Ir al apartado de solicitudes de modificación.<br>4. Aprobar la modificación y ver reflejado el cambio en el historial. | Los pagos se marcan como aprobados en la base de datos y se actualiza el estado de la remanente con su cliente correspondiente. |
-| **MAP-02** | Gestión de rechazo de modificaciones de remanentes | Funcional | Realizar el proceso previo, pero con un rechazo de la modificación. | Los pagos se marcan como rechazados en el registro dando la oportunidad de realizar los cambios de la remanente correspondiente. |
-| **MAP-03** | Revisión correcta de remanentes gestionados | UI | Ir al historial de remanentes del módulo, revisando la lista completa de valores y que coincidan con las respectivas modificaciones. | El sistema procesa la lista completa de remanentes con todos los datos en vista de tabla. |
+| **MAR-01** | Gestión de aprobación de modificaciones de remanentes | Funcional | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Carga Masiva de Remanentes” del panel de pagos.<br>3. Ir al apartado de solicitudes de modificación.<br>4. Aprobar la modificación y ver reflejado el cambio en el historial. | Los remanentes se marcan como aprobados en la base de datos y se actualiza el estado de la remanente con su cliente correspondiente. |
+| **MAR-02** | Gestión de rechazo de modificaciones de remanentes | Funcional | Realizar el proceso previo, pero con un rechazo de la modificación. | Los remanentes se marcan como rechazados en el registro dando la oportunidad de realizar los cambios de la remanente correspondiente. |
+| **MAR-03** | Revisión correcta de remanentes gestionados | UI | Ir al historial de remanentes del módulo, revisando la lista completa de valores y que coincidan con las respectivas modificaciones. | El sistema procesa la lista completa de remanentes con todos los datos en vista de tabla. |
 ---
 
 ## 3. Carga Masiva de Precios Bases de Vehículos (CSV)
