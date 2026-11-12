@@ -1,10 +1,11 @@
 name: Jira Sync
 on:
-    workflow_dispatch:
-#   issues:
-#     types: [opened, labeled, unlabeled]
-#   issue_comment:
-#     types: [created]
+  # workflow_dispatch:
+  issues:
+    types: [opened, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+
 jobs:
   sync:
     name: Sync Items
@@ -18,5 +19,5 @@ jobs:
           jiraHost: ${{ secrets.JIRA_HOST }}
           jiraUsername: ${{ secrets.JIRA_USERNAME }}
           jiraPassword: ${{ secrets.JIRA_PASSWORD }} # See https://id.atlassian.com/manage/api-tokens
-          project: PROJECTKEY
-          assignee: default_assignee
+          project: TEST
+          # assignee: default_assignee
