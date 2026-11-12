@@ -9,7 +9,7 @@
 | **MEL-01** | Visualización simultánea (1 y 2 subastas) | Funcional | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Monitor en Línea” del panel de subastas.<br>3. Seleccionar 2 subastas activas simultáneas. | El panel se divide correctamente mostrando información dinámica en tiempo real de ambas subastas sin lag ni distorsión visual. Los botones de funcionalidad realizan cada acción entre eliminar vistas de subastas o intercambiar posiciones. |
 | **MEL-02** | Límite máximo de subastas en pantalla | Regla de Negocio | Intentar seleccionar una 3ª subasta activa para monitorear. | El sistema impide seleccionar más de 2 subastas simultáneas, impide añadir una nueva bloqueando la acción o reemplaza la primera seleccionada con sustitución estilo cascada. |
 | **MEL-03** | Diferenciación de tipos de subasta | Funcional / UI | Monitorear en paralelo una subasta de **Vehículos**, una de **Litigios** y una de **Lotes**. | La interfaz muestra claramente los distintivos/etiquetas del tipo de subasta y la estructura de datos correspondiente (ej. en subasta de lotes se muestra en rojo y con el lote de vehículos y no pujas individuales por auto). |
-| **MEL-04** | Actualización en tiempo real | Rendimiento / UI | Realizar pujas desde la vista de cliente mientras el administrador monitorea. | El cronómetro, el historial de pujas y la oferta actual se actualizan en tiempo real en la vista de monitoreo sin refrescar la página, respetando el tiempo de consulta a la base de datos para evitar saturación de consultas/seg (cada 5 segundos realiza la consulta). |
+| **MEL-04** | Correcta actualización de puja en tiempo real | Rendimiento / UI | Realizar pujas desde la vista de cliente mientras el administrador monitorea. | El cronómetro, el historial de pujas y la oferta actual se actualizan en tiempo real en la vista de monitoreo sin refrescar la página, respetando el tiempo de consulta a la base de datos para evitar saturación de consultas/seg (cada 5 segundos realiza la consulta). |
 
 ---
 
@@ -20,6 +20,7 @@
 | **MAR-01** | Gestión de aprobación de modificaciones de remanentes | Funcional | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Carga Masiva de Remanentes” del panel de pagos.<br>3. Ir al apartado de solicitudes de modificación.<br>4. Aprobar la modificación y ver reflejado el cambio en el historial. | Los remanentes se marcan como aprobados en la base de datos y se actualiza el estado de la remanente con su cliente correspondiente. |
 | **MAR-02** | Gestión de rechazo de modificaciones de remanentes | Funcional | Realizar el proceso previo, pero con un rechazo de la modificación. | Los remanentes se marcan como rechazados en el registro dando la oportunidad de realizar los cambios de la remanente correspondiente. |
 | **MAR-03** | Revisión correcta de remanentes gestionados | UI | Ir al historial de remanentes del módulo, revisando la lista completa de valores y que coincidan con las respectivas modificaciones. | El sistema procesa la lista completa de remanentes con todos los datos en vista de tabla. |
+| **MAR-04** | Restricción de rol analista | Funcional | Desde un perfil con rol de Analista, revisar la ultima columna de la tabla de modificaciones. | Los botones de accion de aprobación y rechazo de las modificaciones deben estar ocultos. |
 ---
 
 ## 3. Carga Masiva de Precios Bases de Vehículos (CSV)
@@ -36,9 +37,9 @@
 
 | ID | Título del Caso | Tipo | Pasos | Resultado Esperado |
 |---|---|---|---|---|
-| **RVH-01** | Registro completo de vehículo exitoso | Funcional / UX | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Registrar vehiculos” del panel de subastas.<br>3. Ir al apartado de “Registro de vehículo individual”.<br>4. Llenar el formulario con un vehículo no registrado en la plataforma | El vehículo se crea exitosamente en estado "Disponible" y el flujo resulta más fluido, rápido e intuitivo con respecto a la versión anterior. |
-| **RVH-02** | Validación de campos obligatorios y máscaras | Validación | Intentar guardar el formulario dejando campos requeridos vacíos (ej. Marca, Empresa, Modelo, Valor Base, etc..). | El formulario resalta los campos faltantes con alertas de error descriptivas y bloquea el envío. |
-| **RVH-03** | Persistencia de datos al navegar/descartar | UX | Llenar parcialmente el formulario y refrescar o salir de la pantalla. | El sistema solicita confirmación de salida para evitar pérdida accidental de datos o bien deja en cache las casillas ya llenadas previamente de forma que al ingresar queden los datos ya ingresados. |
+| **RVN-01** | Registro completo de vehículo exitoso | Funcional / UX | 1. Ingresar como Administrador a la plataforma.<br>2. Ingresar al módulo de “Registrar vehiculos” del panel de subastas.<br>3. Ir al apartado de “Registro de vehículo individual”.<br>4. Llenar el formulario con un vehículo no registrado en la plataforma | El vehículo se crea exitosamente en estado "Disponible" y el flujo resulta más fluido, rápido e intuitivo con respecto a la versión anterior. |
+| **RVN-02** | Validación de campos obligatorios y máscaras | Validación | Intentar guardar el formulario dejando campos requeridos vacíos (ej. Marca, Empresa, Modelo, Valor Base, etc..). | El formulario resalta los campos faltantes con alertas de error descriptivas y bloquea el envío. |
+| **RVN-03** | Persistencia de datos al navegar/descartar | UX | Llenar parcialmente el formulario y refrescar o salir de la pantalla. | El sistema solicita confirmación de salida para evitar pérdida accidental de datos o bien deja en cache las casillas ya llenadas previamente de forma que al ingresar queden los datos ya ingresados. |
 
 ---
 
@@ -50,7 +51,6 @@
 | **RRF-02** | Edición y sustitución directa de imágenes | Funcional | Alterar/reemplazar imágenes de un vehículo directamente desde el repositorio general. | Las imágenes se actualizan inmediatamente en el detalle del vehículo sin necesidad de entrar a la ficha de edición individual del vehículo. |
 | **RRF-03** | Restricciones de formato, peso y resolución | Validación | Subir archivos con formatos no permitidos (`.pdf`, `.csv`) o imágenes que superen el tamaño máximo permitido (ej. > 20MB). | El sistema rechaza los archivos no válidos y muestra las restricciones de carga. |
 | **RRF-04** | Vinculación posterior de imágenes a un vehículo | Funcional | Asignar un lote de fotos guardadas en el repositorio a un vehículo recién creado. | El vehículo adopta las imágenes seleccionadas y su galería principal se actualiza adecuadamente. |
-| **RRF-05** | Visualización y carga correcta desde cámara de dispositivo | Funcional | Cargar fotos desde la cámara desde el dispositivo verificando la correcta compatibilidad tanto del formato generado por la cámara como la correcta visualización para la carga de imágenes. | El vehículo toma las imágenes capturadas y su galería se actualiza adecuadamente luego de la carga. |
 
 ---
 
@@ -76,8 +76,8 @@
 
 | ID | Título del Caso | Tipo | Pasos | Resultado Esperado |
 |---|---|---|---|---|
-| **PCO-01** | Renderizado y diseño Responsive | UI / Cross-client | Desplegar el envío de correos (Creación de cuenta, Líder de puja, Cambio de contraseña, etc..) y abrir en el dominio especifico de correo electrónico, aplicando también uso de responsive. | El diseño HTML/CSS se ajusta correctamente, sin imágenes rotas, sin desbordamiento de texto y respetando la nueva línea gráfica. |
+| **PCO-01** | Renderizado y visualización de plantilla | UI / Cross-client | Desplegar el envío de correos (Creación de cuenta, Líder de puja, Cambio de contraseña, etc..) y abrir en el dominio especifico de correo electrónico, aplicando también uso de responsive. | El diseño HTML/CSS se ajusta correctamente, sin imágenes rotas, sin desbordamiento de texto y respetando la nueva línea gráfica. |
 | **PCO-02** | Inyección correcta de variables dinámicas | Funcional | Generar correos de por ejemplo “Líder de pujas" y "Cambio de Contraseña". | Los tags dinámicos se reemplazan correctamente (ej. Nombre del cliente, Monto ganador, Placa del vehículo, etc..). |
-| **PCO-03** | Entrega de correos masivos / Spam check | Integración | Ejecutar acciones que disparen múltiples correos. | Los correos llegan a la bandeja de entrada (no Spam) y respetan las cabeceras/DKIM/SPF configuradas. Verificar que el uso excesivo no bloquea el servicio de Masive |
+| **PCO-03** | Entrega de correos masivos / bandeja de corrreos no deseados | Integración | Ejecutar acciones que disparen múltiples correos. | Los correos llegan a la bandeja de entrada (no Spam) y respetan las cabeceras/DKIM/SPF configuradas. Verificar que el uso excesivo no bloquea el servicio de Masive |
 
 ---
