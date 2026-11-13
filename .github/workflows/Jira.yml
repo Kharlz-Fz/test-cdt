@@ -7,9 +7,74 @@ on:
     types: [created]
 
 jobs:
-  sync:
-    name: Sync Items
+  # Crea el ticket en Jira (tipo "Error") llamando directamente a la API
+  # y deja el comentario "Issue: <CLAVE>" en el issue de GitHub.
+  create:
+    name: Create Jira Bug
+    if: github.event_name == 'issues' && github.event.action == 'opened'
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      JIRA_HOST: ${{ secrets.JIRA_HOST }}
+      JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+      JIRA_PASSWORD: ${{ secrets.JIRA_PASSWORD }} # See https://id.atlassian.com/manage/api-tokens
+      JIRA_ASSIGNEE_ID: ${{ secrets.JIRA_ASSIGNEE_ID }} # Opcional: accountId de Jira
+      JIRA_PROJECT: TEST
+      JIRA_ISSUE_TYPE: Error
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      ISSUE_URL: ${{ github.event.issue.html_url }}
+      ISSUE_AUTHOR_URL: ${{ github.event.issue.user.html_url }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Create Jira issue
+        id: jira
+        run: |
+          set -euo pipefail
+          host="${JIRA_HOST#https://}"; host="${host#http://}"; host="${host%/}"
+
+          description="$(printf '%s\n\nRaised by: %s\n\n%s' "${ISSUE_BODY:-}" "$ISSUE_AUTHOR_URL" "$ISSUE_URL")"
+
+          payload="$(jq -n \
+            --arg project "$JIRA_PROJECT" \
+            --arg type "$JIRA_ISSUE_TYPE" \
+            --arg summary "$ISSUE_TITLE" \
+            --arg description "$description" \
+            --arg assignee "${JIRA_ASSIGNEE_ID:-}" \
+            '{fields: ({
+                project: {key: $project},
+                issuetype: {name: $type},
+                summary: $summary,
+                description: $description
+              } + (if $assignee != "" then {assignee: {accountId: $assignee}} else {} end))}')"
+
+          response="$(curl -sS --fail-with-body \
+            -u "$JIRA_USERNAME:$JIRA_PASSWORD" \
+            -H "Content-Type: application/json" \
+            -X POST "https://$host/rest/api/2/issue" \
+            -d "$payload")" || { echo "Jira respondió con error:"; echo "$response"; exit 1; }
+
+          key="$(echo "$response" | jq -r '.key')"
+          echo "Creado $key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      - name: Comment Jira key on GitHub issue
+        env:
+          JIRA_KEY: ${{ steps.jira.outputs.key }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Issue: $JIRA_KEY"
+
+  # Etiquetas y comentarios: la acción busca el comentario "Issue: <CLAVE>"
+  # que deja el job anterior para saber a qué ticket aplicar los cambios.
+  sync:
+    name: Sync Labels and Comments
+    if: github.event_name == 'issue_comment' || (github.event_name == 'issues' && github.event.action != 'opened')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
     steps:
       - name: Sync
         uses: mheap/github-action-issue-to-jira@v1
@@ -18,6 +83,5 @@ jobs:
         with:
           jiraHost: ${{ secrets.JIRA_HOST }}
           jiraUsername: ${{ secrets.JIRA_USERNAME }}
-          jiraPassword: ${{ secrets.JIRA_PASSWORD }} # See https://id.atlassian.com/manage/api-tokens
+          jiraPassword: ${{ secrets.JIRA_PASSWORD }}
           project: TEST
-          assignee: ${{ secrets.JIRA_USERNAME }}
