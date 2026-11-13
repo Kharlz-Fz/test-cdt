@@ -64,8 +64,13 @@ jobs:
       - name: Comment Jira key on GitHub issue
         env:
           JIRA_KEY: ${{ steps.jira.outputs.key }}
+        # El texto debe conservar "Issue: <CLAVE>": el job sync lo usa para encontrar el ticket.
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "Issue: $JIRA_KEY"
+          host="${JIRA_HOST#https://}"; host="${host#http://}"; host="${host%/}"
+          body="Se ha sincronizado el siguiente Issue: $JIRA_KEY, en Jira. Para más información revisa el siguiente ticket:
+
+          Ver ticket: https://$host/browse/$JIRA_KEY"
+          gh issue comment "$ISSUE_NUMBER" --body "$body"
 
   # Etiquetas y comentarios: la acción busca el comentario "Issue: <CLAVE>"
   # que deja el job anterior para saber a qué ticket aplicar los cambios.
