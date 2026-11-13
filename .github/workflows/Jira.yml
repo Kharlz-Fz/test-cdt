@@ -2,7 +2,7 @@ name: Jira Sync
 on:
   # workflow_dispatch:
   issues:
-    types: [opened, labeled, unlabeled]
+    types: [opened, labeled, unlabeled, closed, reopened]
   issue_comment:
     types: [created]
 
@@ -72,11 +72,61 @@ jobs:
           Ver ticket: https://$host/browse/$JIRA_KEY"
           gh issue comment "$ISSUE_NUMBER" --body "$body"
 
+  # Cerrar el issue mueve el ticket a un estado de categoría "Listo" (done);
+  # reabrirlo lo devuelve a uno de categoría "Por hacer" (new).
+  # Se elige la transición por categoría, así no depende del nombre exacto del estado.
+  transition:
+    name: Sync Status
+    if: github.event_name == 'issues' && (github.event.action == 'closed' || github.event.action == 'reopened')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+    env:
+      JIRA_HOST: ${{ secrets.JIRA_HOST }}
+      JIRA_USERNAME: ${{ secrets.JIRA_USERNAME }}
+      JIRA_PASSWORD: ${{ secrets.JIRA_PASSWORD }}
+      TARGET_CATEGORY: ${{ github.event.action == 'closed' && 'done' || 'new' }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Transition Jira issue
+        run: |
+          set -euo pipefail
+          host="${JIRA_HOST#https://}"; host="${host#http://}"; host="${host%/}"
+          jira() { curl -sS --fail-with-body -u "$JIRA_USERNAME:$JIRA_PASSWORD" -H "Content-Type: application/json" "$@"; }
+
+          first_comment="$(gh api "repos/$GH_REPO/issues/$ISSUE_NUMBER/comments?per_page=1" --jq '.[0].body // ""')"
+          key="$(echo "$first_comment" | grep -oE 'Issue: [A-Za-z0-9_]+-[0-9]+' | head -n1 | cut -d' ' -f2 || true)"
+          if [ -z "$key" ]; then
+            echo "Este issue no tiene ticket de Jira asociado; no hay nada que sincronizar."
+            exit 0
+          fi
+
+          current="$(jira "https://$host/rest/api/2/issue/$key?fields=status" | jq -r '.fields.status.statusCategory.key')"
+          if [ "$current" = "$TARGET_CATEGORY" ]; then
+            echo "$key ya está en la categoría '$TARGET_CATEGORY'; no se cambia."
+            exit 0
+          fi
+
+          transitions="$(jira "https://$host/rest/api/2/issue/$key/transitions")"
+          id="$(echo "$transitions" | jq -r --arg cat "$TARGET_CATEGORY" \
+            '[.transitions[] | select(.to.statusCategory.key == $cat)][0].id // empty')"
+          if [ -z "$id" ]; then
+            echo "No hay una transición desde el estado actual de $key hacia la categoría '$TARGET_CATEGORY'. Disponibles:"
+            echo "$transitions" | jq -r '.transitions[] | "- \(.name) -> \(.to.name) (\(.to.statusCategory.key))"'
+            exit 1
+          fi
+
+          jira -X POST "https://$host/rest/api/2/issue/$key/transitions" \
+            -d "$(jq -n --arg id "$id" '{transition: {id: $id}}')"
+          echo "$key movido a '$(echo "$transitions" | jq -r --arg id "$id" '.transitions[] | select(.id == $id) | .to.name')'."
+
   # Etiquetas y comentarios: la acción busca el comentario "Issue: <CLAVE>"
   # que deja el job anterior para saber a qué ticket aplicar los cambios.
   sync:
     name: Sync Labels and Comments
-    if: github.event_name == 'issue_comment' || (github.event_name == 'issues' && github.event.action != 'opened')
+    if: github.event_name == 'issue_comment' || (github.event_name == 'issues' && (github.event.action == 'labeled' || github.event.action == 'unlabeled'))
     runs-on: ubuntu-latest
     permissions:
       issues: read
